@@ -1,0 +1,71 @@
+name: Deploy to Hostinger VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # NEXT_PUBLIC_* variables are inlined into the client bundle at BUILD
+      # time, not read at server runtime — setting them only in the server's
+      # .env.production.local (see docs/DEPLOYMENT.md) would silently ship a
+      # build that still thinks it's on the placeholder .example domain and
+      # non-production siteEnv, which keeps /robots.ts blocking all indexing.
+      # NEXT_PUBLIC_SITE_URL is a repo *variable* (not secret) — it's a public
+      # URL, just kept out of the workflow file so it isn't hardcoded here.
+      - name: Build Next.js App
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_SITE_ENV: production
+
+      - name: Deploy via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOSTINGER_IP }}
+          username: ${{ secrets.HOSTINGER_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          source: ".next/standalone/,.next/static/,public/,ecosystem.config.js"
+          target: "/var/www/northpeak"
+
+      - name: Restart PM2 Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_IP }}
+          username: ${{ secrets.HOSTINGER_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/northpeak
+
+            # Next.js standalone mode requires static assets and public/
+            # to be copied inside the standalone folder manually.
+            cp -r .next/static .next/standalone/.next/
+            cp -r public .next/standalone/
+
+            # Standalone's generated server.js loads .env files from its own
+            # directory at startup (same @next/env loader `next start` uses).
+            # This file lives ONLY on the server — never in git, never synced
+            # by the SCP step above — so it survives every deploy untouched.
+            # Created once during initial provisioning; see docs/DEPLOYMENT.md.
+            if [ -f /var/www/northpeak/.env.production.local ]; then
+              cp /var/www/northpeak/.env.production.local .next/standalone/.env.production.local
+            fi
+
+            # Start or reload the application with zero downtime
+            pm2 reload ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
+            pm2 save
