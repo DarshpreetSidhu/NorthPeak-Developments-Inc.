@@ -12,18 +12,26 @@ reads from it.
 
 | Item | Where it's used | Why it's blocking |
 | --- | --- | --- |
-| Production domain (`NEXT_PUBLIC_SITE_URL`) | Canonical URLs, sitemap, OG tags, JSON-LD | Currently falls back to `https://www.northpeakdevelopments.example`, a deliberately non-real placeholder domain (RFC 2606) so nothing gets accidentally published under a real address |
+| Production domain (`NEXT_PUBLIC_SITE_URL`) | Canonical URLs, sitemap, OG tags, JSON-LD | Resolved 2026-09-25 — `https://northpeakdevelopments.ca` confirmed as the owner's domain (see the domain-conflict note below); falls back to the placeholder `https://www.northpeakdevelopments.example` until this is actually set as an environment variable on the deployment |
 | `NEXT_PUBLIC_SITE_ENV=production` on the live deployment only | `src/app/robots.ts` | Any other value blocks all search indexing — this must be set correctly per environment or the real site won't get crawled |
 | Business phone number | Footer, contact page, JSON-LD (`site.config.ts` → `contact.phone` / `contact.phoneHref`) | Currently blank; the footer and contact page gracefully fall back to "use the form" copy, but a real number should be added |
 | Business email | Same as above (`contact.email`) | Same fallback behavior |
 | Contact form delivery (Resend API key + notification email, or a CRM webhook URL) | `.env.local`, `src/lib/notify.ts` | Without this, real submissions from **both** the main contact form and the homepage "Build Your Space" configurator are only logged to the server console — see the README's "Contact form behavior" section |
 
-> **Do not use an `@northpeakdevelopments.ca` address for `CONTACT_NOTIFICATION_EMAIL`
-> without first confirming you own that domain.** During this build, that
-> domain was checked and found to be a live site for a real, unrelated
-> Calgary business (a commercial-cleaning company), not this renovation
-> contractor — see `src/lib/notify.ts` for the full note. Verify domain
-> ownership before configuring lead delivery to any address on it.
+> **Domain conflict — resolved 2026-09-25.** Earlier in this build,
+> `northpeakdevelopments.ca` was checked and found to be a live site for a
+> real, unrelated Calgary business (a commercial-cleaning company), not this
+> renovation contractor. Re-checked via WHOIS and DNS lookup on 2026-09-25:
+> the domain now shows a registration date of 2026-09-18 (a fresh
+> registration, not the original one), is hosted on Hostinger's network, has
+> Hostinger email actively configured (MX + SPF for `mail.hostinger.com`),
+> and the owner confirmed it's listed in their own Hostinger hPanel — the
+> old business's domain evidently lapsed and this was re-registered. Treated
+> as confirmed; `NEXT_PUBLIC_SITE_URL` can now be set to
+> `https://northpeakdevelopments.ca`. If `CONTACT_NOTIFICATION_EMAIL` is set
+> to an address on this domain, first confirm mail is actually flowing
+> (send a real test) since DNS propagation for a domain this recently
+> re-registered may still be settling in some regions.
 
 > **Case study privacy — `src/lib/projects.ts`.** The `chestermere-exterior-remediation`
 > case study was seeded with a generalized location ("Chestermere, Alberta") and a

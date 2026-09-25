@@ -78,16 +78,16 @@ export async function deliverContactSubmission(
  * Delivers a validated "Build Your Space" configurator lead.
  *
  * IMPORTANT — destination address: an earlier brief for this project asked
- * for leads to route to `build@northpeakdevelopments.ca`. That domain was
- * checked in this project and found to be a live site for a real, unrelated
- * business (a Calgary commercial-cleaning company, not this renovation
- * contractor) — see the conversation history / docs/OWNER_INPUTS.md. This
- * function therefore does NOT hardcode that (or any) address. It reuses the
- * same owner-configured transport as the main contact form
- * (`CONTACT_WEBHOOK_URL`, or `RESEND_API_KEY` + `CONTACT_NOTIFICATION_EMAIL`)
- * so configurator leads and contact-form leads land in one place the owner
- * actually controls. Do not reintroduce that domain here without the owner
- * first confirming they own a mailbox on a domain they control.
+ * for leads to route to `build@northpeakdevelopments.ca`. At the time,
+ * that domain was checked and found to belong to a real, unrelated Calgary
+ * business — see docs/OWNER_INPUTS.md, which also documents that this was
+ * re-checked and resolved on 2026-09-25 (the domain had lapsed and was
+ * freshly re-registered by this project's owner). Regardless, this function
+ * still does NOT hardcode any address — it reuses the same owner-configured
+ * transport as the main contact form (`CONTACT_WEBHOOK_URL`, or
+ * `RESEND_API_KEY` + `CONTACT_NOTIFICATION_EMAIL`) so configurator leads and
+ * contact-form leads land in one place, set via environment variable rather
+ * than committed to source, same as every other secret in this project.
  */
 export async function deliverConfiguratorLead(values: ConfiguratorValues): Promise<NotifyResult> {
   const webhookUrl = process.env.CONTACT_WEBHOOK_URL;
